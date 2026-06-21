@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>习概 · 知识卡片</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --red:#c0392b; --gold:#8b6914; --bg:#faf8f5;
+    --card-bg:#fff; --card-border:rgba(0,0,0,0.08);
+    --text:#1a1a1a; --text2:rgba(0,0,0,0.55); --text3:rgba(0,0,0,0.3);
+  }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.4s;
+  }
+  body.focus-mode { background: #f5f0e8; }
+
+  .bg {
+    position: fixed; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(220,38,38,0.04), transparent 50%),
+      radial-gradient(ellipse 60% 80% at 90% 100%, rgba(200,160,80,0.05), transparent 50%);
+  }
+
+  /* ---------- HEADER ---------- */
+  .header {
+    position: sticky; top:0; z-index:100;
+    background: rgba(250,248,245,0.88); backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 20px 40px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:12px;
+    transition: all 0.4s;
+  }
+  .header-left h1 {
+    font-family: 'Noto Serif SC', serif;
+    font-weight:900; font-size:22px; color: var(--red);
+    letter-spacing:0.05em;
+  }
+  .header-left p {
+    font-size:12px; color:var(--text3); margin-top:2px; letter-spacing:0.1em;
+  }
+  .header-right { display:flex; gap:8px; align-items:center; }
+
+  /* mode toggle */
+  .mode-toggle {
+    display:flex; background:rgba(0,0,0,0.04); border-radius:24px;
+    padding:3px; gap:2px;
+  }
+  .mode-btn {
+    padding:6px 16px; border-radius:22px; border:none; cursor:pointer;
+    font-size:13px; font-family:inherit; font-weight:500;
+    background:transparent; color:var(--text2);
+    transition:all 0.25s;
+  }
+  .mode-btn.active {
+    background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.08);
+    color:var(--text); font-weight:700;
+  }
+
+  /* focus queue toggle */
+  .queue-toggle {
+    display:none; background:rgba(0,0,0,0.04); border-radius:24px;
+    padding:3px; gap:2px;
+  }
+  body.focus-mode .queue-toggle { display:flex; }
+
+  .queue-btn {
+    padding:5px 14px; border-radius:22px; border:none; cursor:pointer;
+    font-size:12px; font-family:inherit; font-weight:500;
+    background:transparent; color:var(--text2);
+    transition:all 0.25s;
+  }
+  .queue-btn.active {
+    background:rgba(220,38,38,0.1); color:var(--red); font-weight:700;
+  }
+
+  .tabs-row {
+    display:flex; gap:5px; flex-wrap:wrap;
+  }
+  .tab {
+    padding:5px 12px; border-radius:18px; font-size:12px; cursor:pointer;
+    background:rgba(0,0,0,0.03); border:1px solid rgba(0,0,0,0.06);
+    color:var(--text2); transition:all 0.2s;
+    font-weight:500; user-select:none;
+  }
+  .tab:hover { border-color:rgba(220,38,38,0.3); color:var(--text); }
+  .tab.active {
+    background:rgba(220,38,38,0.1); border-color:var(--red);
+    color:var(--red); font-weight:700;
+  }
+
+  .container {
+    position:relative; z-index:1; max-width:1200px; margin:0 auto;
+    padding:28px 40px 80px;
+  }
+
+  /* ---------- OVERVIEW MODE ---------- */
+  .overview { display:block; }
+  body.focus-mode .overview { display:none; }
+  body.focus-mode .header { background:rgba(245,240,232,0.9); }
+
+  .section-title {
+    font-family:'Noto Serif SC',serif;
+    font-weight:700; font-size:18px; color:var(--text);
+    margin:36px 0 16px; padding-left:12px;
+    border-left:3px solid var(--red);
+  }
+  .section-title:first-child { margin-top:0; }
+  .grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));
+    gap:14px;
+  }
+  .card-wrap {
+    perspective:700px; height:150px; cursor:pointer;
+  }
+  .card {
+    position:relative; width:100%; height:100%;
+    transform-style:preserve-3d;
+    transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .card-wrap.flipped .card { transform:rotateY(180deg); }
+  .card-face {
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:12px; padding:18px 14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; overflow:hidden;
+  }
+  .front {
+    background:var(--card-bg); border:1px solid var(--card-border);
+    box-shadow:0 2px 10px rgba(0,0,0,0.04);
+    transition:all 0.3s;
+  }
+  .card-wrap:hover .front {
+    border-color:rgba(220,38,38,0.2);
+    box-shadow:0 4px 20px rgba(220,38,38,0.07);
+    transform:translateY(-2px);
+  }
+  .front .icon { font-size:20px; margin-bottom:6px; opacity:0.45; }
+  .front .term {
+    font-family:'Noto Serif SC',serif;
+    font-weight:700; font-size:15px; color:var(--text); line-height:1.4;
+  }
+  .front .hint {
+    font-size:11px; color:var(--text3); margin-top:5px;
+  }
+  .front .tag {
+    position:absolute; top:8px; right:8px;
+    font-size:10px; padding:2px 7px; border-radius:10px;
+    background:rgba(220,38,38,0.1); color:var(--red); font-weight:600;
+  }
+  .back {
+    background:#fdfcf9; border:1px solid rgba(220,38,38,0.12);
+    box-shadow:0 4px 18px rgba(0,0,0,0.06);
+    transform:rotateY(180deg);
+    justify-content:flex-start; text-align:left; overflow-y:auto;
+  }
+  .back::-webkit-scrollbar { width:2px; }
+  .back::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.08); border-radius:1px; }
+  .back .back-term {
+    font-family:'Noto Serif SC',serif;
+    font-weight:700; font-size:13px; color:var(--red);
+    margin-bottom:8px; width:100%; text-align:center;
+  }
+  .back .detail { font-size:11px; line-height:1.7; color:rgba(0,0,0,0.65); width:100%; }
+  .back .detail span.key { color:var(--gold); font-weight:600; }
+
+  .card-wrap.star .front {
+    border-color:rgba(180,130,30,0.3);
+    background:linear-gradient(135deg, #fef9f0, #fffaf5);
+  }
+  .card-wrap.star .front .term { color:var(--gold); }
+
+  /* ---------- FOCUS MODE ---------- */
+  .focus-mode-container { display:none; }
+  body.focus-mode .focus-mode-container {
+    display:flex; flex-direction:column; align-items:center;
+    padding:10px 20px 80px; min-height:calc(100vh - 120px);
+  }
+
+  .section-label {
+    font-size:13px; color:var(--text3); margin-bottom:8px;
+    text-align:center; font-weight:500;
+    letter-spacing:0.04em;
+  }
+
+  .focus-stage {
+    width:100%; max-width:720px; min-height:65vh;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+
+  .focus-card-wrap {
+    width:100%; max-width:640px; min-height:60vh;
+    perspective:1200px; cursor:pointer;
+  }
+
+  .focus-card {
+    position:relative; width:100%; min-height:60vh;
+    transform-style:preserve-3d;
+    transition:transform 0.5s cubic-bezier(0.4,0,0.2,1);
+  }
+  .focus-card-wrap.flipped .focus-card { transform:rotateY(180deg); }
+
+  .focus-face {
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:24px; padding:40px 44px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; overflow-y:auto;
+  }
+  .focus-face::-webkit-scrollbar { width:4px; }
+  .focus-face::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.1); border-radius:2px; }
+
+  .focus-front {
+    background:#fff; border:1px solid rgba(0,0,0,0.08);
+    box-shadow:0 8px 40px rgba(0,0,0,0.06);
+  }
+  .focus-front .icon { font-size:72px; margin-bottom:28px; opacity:0.3; }
+  .focus-front .term {
+    font-family:'Noto Serif SC',serif;
+    font-weight:900; font-size:48px; color:var(--text);
+    line-height:1.25; margin-bottom:20px;
+  }
+  .focus-front .hint {
+    font-size:22px; color:var(--text3); letter-spacing:0.08em;
+  }
+  .focus-front .tag {
+    position:absolute; top:24px; right:24px;
+    font-size:15px; padding:6px 20px; border-radius:18px;
+    background:rgba(220,38,38,0.1); color:var(--red); font-weight:700;
+  }
+
+  .focus-back {
+    background:#fdfcf9; border:1px solid rgba(220,38,38,0.15);
+    box-shadow:0 8px 40px rgba(0,0,0,0.06);
+    transform:rotateY(180deg);
+    justify-content:flex-start; text-align:left;
+  }
+  .focus-back .back-term {
+    font-family:'Noto Serif SC',serif;
+    font-weight:700; font-size:36px; color:var(--red);
+    margin-bottom:32px; width:100%; text-align:center;
+  }
+  .focus-back .detail {
+    font-size:22px; line-height:2.2; color:rgba(0,0,0,0.7); width:100%;
+  }
+  .focus-back .detail span.key { color:var(--gold); font-weight:700; }
+
+  /* focus star */
+  .focus-card-wrap.star .focus-front {
+    border-color:rgba(180,130,30,0.25);
+    background:linear-gradient(160deg, #fef9f0, #fffaf5);
+  }
+  .focus-card-wrap.star .focus-front .term { color:var(--gold); }
+
+  /* nav arrows */
+  .nav-area {
+    display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+    z-index:50; pointer-events:none;
+  }
+  body.focus-mode .nav-area { display:block; }
+  .nav-arrow {
+    position:absolute; top:50%; transform:translateY(-50%);
+    pointer-events:all;
+    width:48px; height:48px; border-radius:50%;
+    background:rgba(255,255,255,0.9); border:1px solid rgba(0,0,0,0.08);
+    box-shadow:0 2px 12px rgba(0,0,0,0.06);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:20px; color:var(--text);
+    transition:all 0.25s;
+    user-select:none; -webkit-user-select:none;
+  }
+  .nav-arrow:hover { box-shadow:0 4px 20px rgba(0,0,0,0.12); background:#fff; }
+  .nav-arrow:active { transform:translateY(-50%) scale(0.95); }
+  .nav-left { left:max(20px, calc((100vw - 760px)/2 - 56px)); }
+  .nav-right { right:max(20px, calc((100vw - 760px)/2 - 56px)); }
+
+  .counter {
+    display:none; text-align:center; padding-top:20px;
+    font-size:14px; color:var(--text3);
+  }
+  body.focus-mode .counter { display:block; }
+
+  .hint-bar {
+    display:none; text-align:center; padding-top:8px;
+    font-size:12px; color:var(--text3); letter-spacing:0.06em;
+  }
+  body.focus-mode .hint-bar { display:block; }
+
+  /* mobile */
+  @media (max-width:600px) {
+    .header { padding:14px 16px; }
+    .header-left h1 { font-size:17px; }
+    .grid { grid-template-columns:repeat(auto-fill, minmax(145px,1fr)); gap:10px; }
+    .card-wrap { height:130px; }
+    .front .term { font-size:13px; }
+    .focus-stage { max-width:100%; min-height:55vh; }
+    .focus-card-wrap { max-width:100%; min-height:50vh; }
+    .focus-card { min-height:50vh; }
+    .focus-face { padding:32px 24px; border-radius:18px; }
+    .focus-front .term { font-size:34px; }
+    .focus-front .icon { font-size:52px; }
+    .focus-back .back-term { font-size:28px; }
+    .focus-back .detail { font-size:18px; line-height:2; }
+    .nav-arrow { width:38px; height:38px; font-size:16px; }
+    .nav-left { left:2px; }
+    .nav-right { right:2px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+
+<div class="nav-area">
+  <div class="nav-arrow nav-left" id="navLeft">◀</div>
+  <div class="nav-arrow nav-right" id="navRight">▶</div>
+</div>
+
+<div class="header">
+  <div class="header-left"><h1>习近平新时代中国特色社会主义思想概论</h1><p>知识卡片 · 期末复习</p></div>
+  <div class="header-right">
+    <div class="queue-toggle" id="queueToggle">
+      <button class="queue-btn active" data-q="star">重点</button>
+      <button class="queue-btn" data-q="all">全部</button>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="overview">概览</button>
+      <button class="mode-btn" data-mode="focus">专注</button>
+    </div>
+  </div>
+  <div class="tabs-row" id="tabs"></div>
+</div>
+
+<div class="container overview" id="overviewContainer">
+  <div id="overviewContent"></div>
+</div>
+
+<div class="focus-mode-container" id="focusContainer">
+  <div class="section-label" id="sectionLabel"></div>
+  <div class="focus-stage" id="focusStage"></div>
+  <div class="counter" id="counter">1 / 1</div>
+  <div class="hint-bar">← → 切换卡片 &nbsp;|&nbsp; 空格 / 点击 翻转</div>
+</div>
+
+<script>
+const CARDS = [
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'两个大局', k:true, hint:'时代背景', detail:'<span class="key">中华民族伟大复兴战略全局</span>和<span class="key">世界百年未有之大变局</span>。前者是奋斗目标，后者是外部环境，统筹两个大局是谋划工作的基本出发点。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'两个结合', k:true, hint:'重大成果', detail:'马克思主义基本原理同<span class="key">中国具体实际</span>相结合、同<span class="key">中华优秀传统文化</span>相结合。这是我们取得成功的<span class="key">最大法宝</span>，是又一次思想解放。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'两个确立', k:true, hint:'决定性意义', detail:'<span class="key">确立习近平同志党中央的核心、全党的核心地位</span>；<span class="key">确立习近平新时代中国特色社会主义思想的指导地位</span>。是党在新时代取得的重大政治成果，对推进中华民族伟大复兴历史进程具有决定性意义。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'两个维护', hint:'政治要求', detail:'<span class="key">坚决维护习近平总书记党中央的核心、全党的核心地位</span>；<span class="key">坚决维护党中央权威和集中统一领导</span>。是党的最高政治原则和根本政治规矩。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'四个自信', hint:'道路·理论·制度·文化', detail:'<span class="key">道路自信、理论自信、制度自信、文化自信</span>。其中文化自信是更基础、更广泛、更深厚的自信，是一个民族发展中最基本、最深沉、最持久的力量。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'四个意识', hint:'政·大·核·看', detail:'<span class="key">政治意识、大局意识、核心意识、看齐意识</span>。政治意识是根本，核心意识是关键，向党中央看齐、向习近平总书记看齐。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'五位一体总体布局', hint:'经·政·文·社·生', detail:'<span class="key">经济建设、政治建设、文化建设、社会建设、生态文明建设</span>五位一体，是中国特色社会主义事业的总体布局。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'四个全面战略布局', k:true, hint:'现代化·改革·法治·治党', detail:'<span class="key">全面建设社会主义现代化国家、全面深化改革、全面依法治国、全面从严治党</span>。全面建设社会主义现代化国家是战略目标，后三者是战略举措。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'三大时代课题', hint:'核心问题', detail:'①新时代坚持和发展<span class="key">什么样的中国特色社会主义、怎样坚持和发展</span>；②建设<span class="key">什么样的社会主义现代化强国、怎样建设</span>；③建设<span class="key">什么样的长期执政的马克思主义政党、怎样建设</span>。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'六个必须坚持', hint:'世界观方法论', detail:'<span class="key">人民至上</span>（价值立场）、<span class="key">自信自立</span>（精神特质）、<span class="key">守正创新</span>（理论品格）、<span class="key">问题导向</span>（实践要求）、<span class="key">系统观念</span>（思想方法）、<span class="key">胸怀天下</span>（境界格局）。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'新时代主要矛盾', hint:'核心判断', detail:'<span class="key">人民日益增长的美好生活需要</span>和<span class="key">不平衡不充分的发展</span>之间的矛盾。这一变化反映了我国社会发展的客观实际。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'新时代科学内涵', k:true, hint:'简答高频', detail:'<span class="key">五个时代</span>：①承前启后继往开来夺取新胜利的时代 ②决胜小康、建设现代化强国的时代 ③团结奋斗实现共同富裕的时代 ④实现中国梦的时代 ⑤走近世界舞台中央为人类作更大贡献的时代。'},
+  {s:'一、马克思主义中国化时代化新的飞跃', t:'思想历史地位', k:true, hint:'三个判断', detail:'①<span class="key">当代中国马克思主义、二十一世纪马克思主义</span> ②<span class="key">中华文化和中国精神的时代精华</span> ③实现了<span class="key">马克思主义中国化时代化新的飞跃</span> ④为强国建设民族复兴提供根本遵循。'},
+
+  {s:'二、以中国式现代化全面推进中华民族伟大复兴', t:'中国梦', k:true, hint:'本质内涵', detail:'<span class="key">国家富强、民族振兴、人民幸福</span>。中国梦是国家的梦、民族的梦，也是每个中国人的梦。'},
+  {s:'二、以中国式现代化全面推进中华民族伟大复兴', t:'两步走战略', hint:'战略安排', detail:'① <span class="key">2020年到2035年</span>：基本实现社会主义现代化；② <span class="key">2035年到本世纪中叶</span>：建成富强民主文明和谐美丽的社会主义现代化强国。'},
+  {s:'二、以中国式现代化全面推进中华民族伟大复兴', t:'中国式现代化五个特色', k:true, hint:'论述必背', detail:'①<span class="key">人口规模巨大</span>的现代化——超现有发达国家人口总和 ②<span class="key">全体人民共同富裕</span>的现代化——区别于两极分化 ③<span class="key">物质文明和精神文明相协调</span>的现代化——区别于物质主义膨胀 ④<span class="key">人与自然和谐共生</span>的现代化——区别于先污染后治理 ⑤<span class="key">走和平发展道路</span>的现代化——区别于殖民掠夺老路。'},
+  {s:'二、以中国式现代化全面推进中华民族伟大复兴', t:'中国式现代化本质要求', k:true, hint:'简答高频·9条', detail:'<span class="key">坚持中国共产党领导，坚持中国特色社会主义</span>，实现高质量发展，发展全过程人民民主，丰富人民精神世界，实现全体人民共同富裕，促进人与自然和谐共生，推动构建人类命运共同体，<span class="key">创造人类文明新形态</span>。'},
+  {s:'二、以中国式现代化全面推进中华民族伟大复兴', t:'人类文明新形态', k:true, hint:'重大创新', detail:'中国式现代化<span class="key">打破了"现代化=西方化"的迷思</span>，摒弃了以资本为中心、两极分化、物质主义膨胀、对外扩张掠夺的西方现代化老路，展现了不同于西方现代化的新图景，为发展中国家提供了全新选择。'},
+
+  {s:'三、坚持以人民为中心', t:'初心使命', hint:'两为', detail:'<span class="key">为中国人民谋幸福，为中华民族谋复兴</span>。这是中国共产党人的初心和使命。'},
+  {s:'三、坚持以人民为中心', t:'以人民为中心（为什么）', k:true, hint:'论述高频', detail:'①人民是历史的创造者，决定党和国家前途命运的根本力量 ②尊重人民主体地位和首创精神 ③由国家政权性质决定 ④由党的性质和宗旨决定。'},
+  {s:'三、坚持以人民为中心', t:'共同富裕', k:true, hint:'材料分析高频', detail:'定位：<span class="key">社会主义的本质要求，中国式现代化的重要特征</span>。不是少数人的富裕，不是平均主义，分阶段推进的长期过程。路径：坚持基本经济制度，正确处理效率与公平的关系，在高质量发展中推进。'},
+
+  {s:'四、全面深化改革开放', t:'十八届三中全会', hint:'2013年', detail:'2013年11月，通过《全面深化改革若干重大问题的决定》，提出全面深化改革总目标。'},
+  {s:'四、全面深化改革开放', t:'全面深化改革总目标', hint:'核心考点', detail:'<span class="key">完善和发展中国特色社会主义制度，推进国家治理体系和治理能力现代化</span>。前者规定根本方向，后者规定鲜明指向，两句话是一个整体。'},
+  {s:'四、全面深化改革开放', t:'改革开放的性质', hint:'深刻革命', detail:'改革开放是<span class="key">一场深刻革命</span>。必须坚持正确方向，处理好<span class="key">改革发展稳定</span>的关系。'},
+
+  {s:'五、推动高质量发展', t:'新发展阶段', hint:'历史方位', detail:'全面建成小康社会后，开启<span class="key">全面建设社会主义现代化国家新征程</span>的新发展阶段。'},
+  {s:'五、推动高质量发展', t:'新发展理念', k:true, hint:'材料分析必考', detail:'<span class="key">创新</span>（引领发展第一动力，解决动力问题）、<span class="key">协调</span>（持续健康发展内在要求，解决不平衡问题）、<span class="key">绿色</span>（永续发展必要条件，解决人与自然和谐问题）、<span class="key">开放</span>（国家繁荣发展必由之路，解决内外联动问题）、<span class="key">共享</span>（中特本质要求，解决公平正义问题）。是指挥棒、红绿灯。'},
+  {s:'五、推动高质量发展', t:'新发展格局', hint:'双循环', detail:'<span class="key">以国内大循环为主体、国内国际双循环相互促进</span>。不是封闭的国内循环，而是开放的国内国际双循环。'},
+  {s:'五、推动高质量发展', t:'高质量发展', k:true, hint:'首要任务', detail:'<span class="key">体现新发展理念的发展</span>，是全面建设社会主义现代化国家的<span class="key">首要任务</span>。从"有没有"转向"好不好"。创新成为第一动力、协调成为内生特点、绿色成为普遍形态、开放成为必由之路、共享成为根本目的。'},
+  {s:'五、推动高质量发展', t:'社会主义基本经济制度', hint:'制度基础', detail:'<span class="key">公有制为主体、多种所有制经济共同发展</span>；<span class="key">按劳分配为主体、多种分配方式并存</span>；<span class="key">社会主义市场经济体制</span>。三位一体。'},
+
+  {s:'六、发展全过程人民民主', t:'全过程人民民主', k:true, hint:'简答/材料高频', detail:'<span class="key">全链条、全方位、全覆盖</span>的民主，是<span class="key">最广泛、最真实、最管用</span>的社会主义民主。本质是<span class="key">人民当家作主</span>。全链条涵盖民主选举、协商、决策、管理、监督各环节。'},
+  {s:'六、发展全过程人民民主', t:'中特政治发展道路', hint:'核心公式', detail:'<span class="key">党的领导 + 人民当家作主 + 依法治国</span>有机统一。党的领导是根本保证，人民当家作主是本质特征，依法治国是基本方式。'},
+
+  {s:'七、全面依法治国', t:'中特法治道路核心要义', hint:'三位一体', detail:'<span class="key">坚持党的领导</span>（根本保证）+ <span class="key">坚持中国特色社会主义制度</span>（制度基础）+ <span class="key">贯彻中国特色社会主义法治理论</span>（理论指导）。三位一体，缺一不可。'},
+  {s:'七、全面依法治国', t:'全面依法治国总目标', hint:'法治体系+法治国家', detail:'<span class="key">建设中国特色社会主义法治体系，建设社会主义法治国家</span>。'},
+  {s:'七、全面依法治国', t:'全面依法治国重大关系', hint:'四对关系', detail:'<span class="key">政治与法治</span>（党法关系不是对立而是统一）、<span class="key">改革与法治</span>（重大改革于法有据）、<span class="key">依法治国与以德治国</span>（法安天下，德润人心）、<span class="key">依法治国与依规治党</span>。'},
+
+  {s:'八、建设社会主义文化强国', t:'社会主义核心价值观', hint:'24字三层', detail:'国家：<span class="key">富强、民主、文明、和谐</span>；社会：<span class="key">自由、平等、公正、法治</span>；个人：<span class="key">爱国、敬业、诚信、友善</span>。'},
+  {s:'八、建设社会主义文化强国', t:'文化自信', hint:'最基本最深沉最持久', detail:'<span class="key">更基础、更广泛、更深厚的自信</span>，是一个民族发展中<span class="key">最基本、最深沉、最持久</span>的力量。'},
+
+  {s:'九、加强以民生为重点的社会建设', t:'民生', hint:'幸福之基', detail:'民生是<span class="key">人民幸福之基、社会和谐之本</span>。坚持尽力而为、量力而行，抓住人民最关心最直接最现实的利益问题。'},
+  {s:'九、加强以民生为重点的社会建设', t:'社会治理', hint:'治理格局', detail:'建设<span class="key">人人有责、人人尽责、人人享有</span>的社会治理共同体。'},
+
+  {s:'十、建设社会主义生态文明', t:'绿水青山就是金山银山', k:true, hint:'核心理念', detail:'保护生态环境就是保护生产力，改善生态环境就是发展生产力。阐明了<span class="key">经济发展与生态环境保护</span>的辩证关系。'},
+  {s:'十、建设社会主义生态文明', t:'人与自然和谐共生', hint:'核心', detail:'生态文明的核心。坚持<span class="key">节约优先、保护优先、自然恢复为主</span>的方针，用<span class="key">最严格制度最严密法治</span>保护生态环境。'},
+
+  {s:'十一、国家安全与重要保障', t:'总体国家安全观', k:true, hint:'以总体为关键', detail:'以<span class="key">人民安全</span>为宗旨，以<span class="key">政治安全</span>为根本，以<span class="key">经济安全</span>为基础。关键在<span class="key">"总体"</span>，涵盖各领域，国内国际全方位。'},
+  {s:'十一、国家安全与重要保障', t:'强军目标', hint:'听党指挥·能打胜仗·作风优良', detail:'<span class="key">听党指挥</span>是灵魂，<span class="key">能打胜仗</span>是核心，<span class="key">作风优良</span>是保证。'},
+  {s:'十一、国家安全与重要保障', t:'一国两制', hint:'根与从属', detail:'<span class="key">"一国"是根，"一国"是本。</span>"两制"从属并服务于"一国"。维护国家主权、安全、发展利益是最高原则。'},
+
+  {s:'十二、推动构建人类命运共同体', t:'百年未有之大变局', k:true, hint:'简答高频', detail:'①<span class="key">国际力量对比深刻变化</span>——"东升西降"；②<span class="key">新一轮科技革命和产业变革</span>深入发展；③<span class="key">国际体系和国际秩序深度调整</span>；④<span class="key">新的动荡变革期</span>，和平、发展、安全、治理赤字加重。'},
+  {s:'十二、推动构建人类命运共同体', t:'人类命运共同体', hint:'五个世界目标', detail:'建设<span class="key">持久和平、普遍安全、共同繁荣、开放包容、清洁美丽</span>的世界。是对"建设什么样的世界、如何建设"的中国方案。'},
+
+  {s:'十三、坚持党的全面领导与全面从严治党', t:'四个伟大', hint:'斗·工·事·梦', detail:'<span class="key">伟大斗争、伟大工程、伟大事业、伟大梦想</span>。其中<span class="key">伟大工程（党的建设）起决定性作用</span>。'},
+  {s:'十三、坚持党的全面领导与全面从严治党', t:'四大考验', hint:'长期复杂严峻', detail:'<span class="key">执政考验、改革开放考验、市场经济考验、外部环境考验</span>。长期的、复杂的、严峻的。'},
+  {s:'十三、坚持党的全面领导与全面从严治党', t:'四大危险', hint:'尖锐严峻', detail:'<span class="key">精神懈怠危险、能力不足危险、脱离群众危险、消极腐败危险</span>。脱离群众是最大的危险。'},
+  {s:'十三、坚持党的全面领导与全面从严治党', t:'全面从严治党', k:true, hint:'16字核心', detail:'<span class="key">核心是加强党的领导，基础在全面，关键在严，要害在治。</span>"全面"：每个党组织每名党员；"严"：真管真严、敢管敢严、长管长严；"治"：标本兼治，从宽松软走向严紧硬。'},
+  {s:'十三、坚持党的全面领导与全面从严治党', t:'党的领导核心论断', k:true, hint:'论述必用', detail:'①党的领导是<span class="key">中国特色社会主义最本质的特征</span> ②是<span class="key">中特制度的最大优势</span> ③是<span class="key">最高政治领导力量</span> ④<span class="key">党政军民学，东西南北中，党是领导一切的</span>。'},
+];
+
+const sections = [...new Set(CARDS.map(c => c.s))];
+const tabsEl = document.getElementById('tabs');
+const overviewContent = document.getElementById('overviewContent');
+const focusStage = document.getElementById('focusStage');
+const sectionLabel = document.getElementById('sectionLabel');
+const counterEl = document.getElementById('counter');
+
+// ---- tabs ----
+tabsEl.innerHTML = '<span class="tab active" data-s="all">全部</span>';
+sections.forEach(s => {
+  tabsEl.innerHTML += `<span class="tab" data-s="${s}">${s.replace(/^[一二三四五六七八九十]+、/,'')}</span>`;
+});
+
+let filterFilter = 'all';
+let currentMode = 'overview';
+let focusQueue = 'star'; // 'star' or 'all'
+let focusIndex = 0;
+let focusList = [];
+let isSwitching = false;
+
+function getFocusList() {
+  const keyed = CARDS.filter(c => c.k);
+  return focusQueue === 'star' ? keyed : CARDS;
+}
+
+function buildOverviewCard(c) {
+  const star = c.k ? ' star' : '';
+  return `<div class="card-wrap${star}">
+    <div class="card">
+      <div class="card-face front">
+        ${c.k ? '<div class="tag">重点</div>' : ''}
+        <div class="icon">📖</div>
+        <div class="term">${c.t}</div>
+        <div class="hint">${c.hint}</div>
+      </div>
+      <div class="card-face back">
+        <div class="back-term">${c.t}</div>
+        <div class="detail">${c.detail}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderOverview(filter) {
+  const filtered = filter === 'all' ? CARDS : CARDS.filter(c => c.s === filter);
+  if (filter === 'all') {
+    let html = '';
+    sections.forEach(sec => {
+      const cards = CARDS.filter(c => c.s === sec);
+      if (!cards.length) return;
+      html += `<div class="section-title">${sec}</div><div class="grid">`;
+      cards.forEach(c => html += buildOverviewCard(c));
+      html += '</div>';
+    });
+    overviewContent.innerHTML = html;
+  } else {
+    const cards = CARDS.filter(c => c.s === filter);
+    overviewContent.innerHTML = `<div class="section-title">${filter}</div><div class="grid">${cards.map(c => buildOverviewCard(c)).join('')}</div>`;
+  }
+  bindOverviewClicks();
+}
+
+function bindOverviewClicks() {
+  document.querySelectorAll('#overviewContent .card-wrap').forEach(wrap => {
+    wrap.addEventListener('click', function(e) { this.classList.toggle('flipped'); });
+  });
+}
+
+// ---- FOCUS MODE ----
+function initFocus() {
+  focusList = getFocusList();
+  if (focusIndex >= focusList.length) focusIndex = 0;
+  renderFocusCard(true);
+}
+
+function renderFocusCard(instant) {
+  if (!focusList.length) { focusStage.innerHTML = '<p style="color:#999">无卡片</p>'; return; }
+  const c = focusList[focusIndex];
+  sectionLabel.textContent = c.s;
+
+  const star = c.k ? ' star' : '';
+  const html = `
+    <div class="focus-card-wrap${star}">
+      <div class="focus-card">
+        <div class="focus-face focus-front">
+          ${c.k ? '<div class="tag">重点</div>' : ''}
+          <div class="icon">📖</div>
+          <div class="term">${c.t}</div>
+          <div class="hint">${c.hint}</div>
+        </div>
+        <div class="focus-face focus-back">
+          <div class="back-term">${c.t}</div>
+          <div class="detail">${c.detail}</div>
+        </div>
+      </div>
+    </div>`;
+
+  focusStage.innerHTML = html;
+
+  const wrap = focusStage.querySelector('.focus-card-wrap');
+  if (!wrap) return;
+
+  wrap.addEventListener('click', function(e) {
+    if (!isSwitching) this.classList.toggle('flipped');
+  });
+
+  if (!instant) {
+    const dir = focusNavDir || 1;
+    const fromX = dir === 1 ? '80px' : '-80px';
+    wrap.style.transition = 'none';
+    wrap.style.transform = `translateX(${fromX})`;
+    wrap.style.opacity = '0';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        wrap.style.transition = 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.3s ease';
+        wrap.style.transform = 'translateX(0)';
+        wrap.style.opacity = '1';
+      });
+    });
+    wrap.addEventListener('transitionend', function handler() {
+      wrap.removeEventListener('transitionend', handler);
+      wrap.style.transition = '';
+      isSwitching = false;
+    }, {once: true});
+  }
+  updateCounter();
+}
+
+let focusNavDir = 1;
+
+function focusNav(dir) {
+  if (isSwitching || focusList.length <= 1) return;
+  isSwitching = true;
+  focusNavDir = dir;
+  const oldWrap = focusStage.querySelector('.focus-card-wrap');
+  if (!oldWrap) { isSwitching = false; return; }
+
+  const toX = dir === 1 ? '-80px' : '80px';
+  oldWrap.style.transition = 'transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.3s ease';
+  oldWrap.style.transform = `translateX(${toX})`;
+  oldWrap.style.opacity = '0';
+
+  oldWrap.addEventListener('transitionend', function handler() {
+    oldWrap.removeEventListener('transitionend', handler);
+    focusIndex = (focusIndex + dir + focusList.length) % focusList.length;
+    renderFocusCard(false);
+  }, {once: true});
+}
+
+function updateCounter() {
+  counterEl.textContent = `${focusIndex + 1} / ${focusList.length}`;
+}
+
+// ---- MODE SWITCHING ----
+function setMode(mode) {
+  currentMode = mode;
+  document.body.classList.toggle('focus-mode', mode === 'focus');
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  if (mode === 'focus') {
+    tabsEl.style.display = 'none';
+    initFocus();
+  } else {
+    tabsEl.style.display = 'flex';
+    renderOverview(filterFilter);
+  }
+}
+
+// ---- EVENT BINDINGS ----
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
+document.querySelectorAll('.queue-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.queue-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    focusQueue = this.dataset.q;
+    focusIndex = 0;
+    initFocus();
+  });
+});
+
+tabsEl.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('tab')) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  e.target.classList.add('active');
+  filterFilter = e.target.dataset.s;
+  renderOverview(filterFilter);
+});
+
+// Keyboard
+document.addEventListener('keydown', function(e) {
+  if (currentMode !== 'focus') return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    focusNav(e.key === 'ArrowRight' ? 1 : -1);
+  }
+  if (e.key === ' ') {
+    e.preventDefault();
+    const wrap = focusStage.querySelector('.focus-card-wrap');
+    if (wrap && !isSwitching) wrap.classList.toggle('flipped');
+  }
+});
+
+// Nav arrows
+document.getElementById('navLeft').addEventListener('click', () => { if (currentMode === 'focus') focusNav(-1); });
+document.getElementById('navRight').addEventListener('click', () => { if (currentMode === 'focus') focusNav(1); });
+
+// Touch swipe
+let touchStartX = 0;
+focusStage.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+focusStage.addEventListener('touchend', e => {
+  if (currentMode !== 'focus') return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 60) focusNav(dx < 0 ? 1 : -1);
+});
+
+// Init
+renderOverview('all');
+</script>
+</body>
+</html>
