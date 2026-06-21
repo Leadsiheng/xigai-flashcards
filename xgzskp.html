@@ -647,8 +647,14 @@ function renderFocusCard(instant) {
       updateBookmarkStar(this, booked);
       if (focusQueue === 'bookmark') {
         focusList = getFocusList();
-        if (focusIndex >= focusList.length) focusIndex = Math.max(0, focusList.length - 1);
-        updateCounter();
+        if (!focusList.length) {
+          focusStage.innerHTML = '<p style="color:rgba(0,0,0,0.2); font-size:22px; text-align:center; padding:80px 0;">暂无收藏卡片</p>';
+          counterEl.textContent = '0 / 0';
+          return;
+        }
+        if (focusIndex >= focusList.length) focusIndex = focusList.length - 1;
+        focusNavDir = 0;
+        renderFocusCard(true);
       }
     });
   }

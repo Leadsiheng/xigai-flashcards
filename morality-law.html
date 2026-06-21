@@ -38,10 +38,12 @@
     position: sticky; top:0; z-index:100;
     background: rgba(250,248,245,0.88); backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(0,0,0,0.05);
-    padding: 20px 40px;
+    padding: 20px 40px 14px;
+    transition: background 0.4s;
+  }
+  .header-row {
     display:flex; align-items:center; justify-content:space-between;
-    flex-wrap:wrap; gap:12px;
-    transition: all 0.4s;
+    min-height:48px;
   }
   .header-left h1 {
     font-family: 'Noto Serif SC', serif;
@@ -51,7 +53,9 @@
   .header-left p {
     font-size:12px; color:var(--text3); margin-top:2px; letter-spacing:0.1em;
   }
-  .header-right { display:flex; gap:8px; align-items:center; }
+  .header-right { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+  .header-right-inner { display:flex; gap:8px; align-items:center; }
+  .header-spacer { width:140px; flex-shrink:0; }
 
   /* mode toggle */
   .mode-toggle {
@@ -323,8 +327,12 @@
 
   /* mobile */
   @media (max-width:600px) {
-    .header { padding:14px 16px; }
-    .header-left h1 { font-size:17px; }
+    .header { padding:12px 16px; }
+    .header-left h1 { font-size:16px; }
+    .header-row { flex-wrap:wrap; gap:8px; min-height:auto; }
+    .header-left p { display:none; }
+    .queue-btn { padding:4px 10px; font-size:11px; }
+    .mode-btn { padding:4px 12px; font-size:11px; }
     .grid { grid-template-columns:repeat(auto-fill, minmax(145px,1fr)); gap:10px; }
     .card-wrap { height:130px; }
     .front .term { font-size:13px; }
@@ -353,16 +361,18 @@
 </div>
 
 <div class="header">
-  <div class="header-left"><h1>思想道德与法治 · 考点精练</h1><p>知识卡片 · 期末复习</p></div>
-  <div class="header-right">
-    <div class="queue-toggle" id="queueToggle">
-      <button class="queue-btn active" data-q="star">重点</button>
-      <button class="queue-btn" data-q="all">全部</button>
-      <button class="queue-btn" data-q="bookmark">收藏</button>
-    </div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" data-mode="overview">概览</button>
-      <button class="mode-btn" data-mode="focus">专注</button>
+  <div class="header-row">
+    <div class="header-left"><h1>思想道德与法治 · 考点精练</h1><p>知识卡片 · 期末复习</p></div>
+    <div class="header-right">
+      <div class="queue-toggle" id="queueToggle">
+        <button class="queue-btn active" data-q="star">重点</button>
+        <button class="queue-btn" data-q="all">全部</button>
+        <button class="queue-btn" data-q="bookmark">收藏</button>
+      </div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="overview">概览</button>
+        <button class="mode-btn" data-mode="focus">专注</button>
+      </div>
     </div>
   </div>
   <div class="tabs-row" id="tabs"></div>
@@ -567,12 +577,19 @@ function renderFocusCard(instant) {
       if (!card) return;
       const booked = toggleBookmark(card);
       updateBookmarkStar(this, booked);
-      // refresh focus list if in bookmark mode
       if (focusQueue === 'bookmark') {
         focusList = getFocusList();
-        if (focusIndex >= focusList.length) focusIndex = Math.max(0, focusList.length - 1);
-        updateCounter();
+        if (!focusList.length) {
+          focusStage.innerHTML = '<p style="color:rgba(0,0,0,0.2); font-size:22px; text-align:center; padding:80px 0;">暂无收藏卡片</p>';
+          counterEl.textContent = '0 / 0';
+          return;
+        }
+        if (focusIndex >= focusList.length) focusIndex = focusList.length - 1;
+        focusNavDir = 0;
+        renderFocusCard(true);
       }
+    });
+  }
     });
   }
 
