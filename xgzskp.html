@@ -186,13 +186,13 @@
   }
   .fav-star {
     position:absolute; bottom:8px; right:8px;
-    font-size:15px; cursor:pointer; opacity:0.25;
+    font-size:18px; cursor:pointer; opacity:0.25;
     transition:all 0.2s; user-select:none; -webkit-user-select:none;
     background:none; border:none; padding:4px; line-height:1;
-    color:#aaa; font-family:inherit;
+    color:#999; font-family:inherit;
   }
-  .fav-star:hover { opacity:0.6; transform:scale(1.15); }
-  .fav-star.active { opacity:1; color:#f0c040; }
+  .fav-star:hover { opacity:0.6; transform:scale(1.2); }
+  .fav-star.active { opacity:1; color:#e6b800; }
 
   .card-wrap.star .front {
     border-color:rgba(180,130,30,0.3);
@@ -484,6 +484,7 @@ function getFocusList() {
 function buildOverviewCard(c, idx) {
   const star = c.k ? ' star' : '';
   const fav = favorites.has(idx) ? ' active' : '';
+  const favChar = favorites.has(idx) ? '★' : '☆';
   return `<div class="card-wrap${star}" data-idx="${idx}">
     <div class="card">
       <div class="card-face front">
@@ -496,7 +497,7 @@ function buildOverviewCard(c, idx) {
         <div class="back-term">${c.t}</div>
         <div class="detail">${c.detail}</div>
         ${c.q ? `<div class="questions"><div class="q-label">📋 考法提示</div>${c.q}</div>` : ''}
-        <button class="fav-star${fav}" data-idx="${idx}" title="收藏/取消收藏">⭐</button>
+        <button class="fav-star${fav}" data-idx="${idx}" title="收藏/取消收藏">${favChar}</button>
       </div>
     </div>
   </div>`;
@@ -523,7 +524,10 @@ function renderOverview(filter) {
 
 function bindOverviewClicks() {
   document.querySelectorAll('#overviewContent .card-wrap').forEach(wrap => {
-    wrap.addEventListener('click', function(e) { this.classList.toggle('flipped'); });
+    wrap.addEventListener('click', function(e) {
+      if (e.target.closest('.fav-star')) return;
+      this.classList.toggle('flipped');
+    });
   });
 }
 
@@ -542,6 +546,7 @@ function renderFocusCard(instant) {
   const star = c.k ? ' star' : '';
   const cardIdx = CARDS.indexOf(c);
   const fav = favorites.has(cardIdx) ? ' active' : '';
+  const favChar = favorites.has(cardIdx) ? '★' : '☆';
   const html = `
     <div class="focus-card-wrap${star}">
       <div class="focus-card">
@@ -555,7 +560,7 @@ function renderFocusCard(instant) {
           <div class="back-term">${c.t}</div>
           <div class="detail">${c.detail}</div>
           ${c.q ? `<div class="questions"><div class="q-label">📋 考法提示</div>${c.q}</div>` : ''}
-          <button class="fav-star${fav}" data-idx="${cardIdx}" title="收藏/取消收藏">⭐</button>
+          <button class="fav-star${fav}" data-idx="${cardIdx}" title="收藏/取消收藏">${favChar}</button>
         </div>
       </div>
     </div>`;
@@ -566,6 +571,7 @@ function renderFocusCard(instant) {
   if (!wrap) return;
 
   wrap.addEventListener('click', function(e) {
+    if (e.target.closest('.fav-star')) return;
     if (!isSwitching) this.classList.toggle('flipped');
   });
 
@@ -679,13 +685,13 @@ document.addEventListener('click', function(e) {
   if (!btn) return;
   e.stopPropagation();
   const idx = parseInt(btn.dataset.idx);
-  if (favorites.has(idx)) { favorites.delete(idx); } else { favorites.add(idx); }
+  const nowFav = !favorites.has(idx);
+  if (nowFav) { favorites.add(idx); } else { favorites.delete(idx); }
   saveFavs();
-  // Update all stars for this card index
   document.querySelectorAll(`.fav-star[data-idx="${idx}"]`).forEach(s => {
-    s.classList.toggle('active', favorites.has(idx));
+    s.classList.toggle('active', nowFav);
+    s.textContent = nowFav ? '★' : '☆';
   });
-  // If in focus mode on fav queue and unfavoriting, refresh list
   if (currentMode === 'focus' && focusQueue === 'fav') {
     initFocus();
   }
