@@ -13,6 +13,7 @@
     --red:#c0392b; --gold:#8b6914; --bg:#faf8f5;
     --card-bg:#fff; --card-border:rgba(0,0,0,0.08);
     --text:#1a1a1a; --text2:rgba(0,0,0,0.55); --text3:rgba(0,0,0,0.3);
+    --star:#e8b830;
   }
 
   body {
@@ -297,6 +298,29 @@
   }
   body.focus-mode .hint-bar { display:block; }
 
+  /* --- bookmark star --- */
+  .bookmark-star {
+    position:absolute; bottom:12px; right:12px;
+    width:28px; height:28px; cursor:pointer; z-index:10;
+    background:none; border:none; padding:0;
+    transition:transform 0.2s;
+    -webkit-tap-highlight-color:transparent;
+    outline:none;
+  }
+  .bookmark-star:hover { transform:scale(1.2); }
+  .bookmark-star:active { transform:scale(0.9); }
+  .bookmark-star svg { width:100%; height:100%; display:block; }
+  .bookmark-star .star-outline { fill:none; stroke:#c0a050; stroke-width:1.8; }
+  .bookmark-star .star-fill { fill:#e8b830; stroke:#c09020; stroke-width:1.5; }
+  .bookmark-star:not(.booked) .star-fill { display:none; }
+  .bookmark-star.booked .star-outline { display:none; }
+
+  .focus-back .bookmark-star {
+    bottom:18px; right:18px; width:36px; height:36px;
+  }
+  .focus-back .bookmark-star .star-outline { stroke-width:2; }
+  .focus-back .bookmark-star .star-fill { stroke-width:1.8; }
+
   /* mobile */
   @media (max-width:600px) {
     .header { padding:14px 16px; }
@@ -315,6 +339,8 @@
     .nav-arrow { width:38px; height:38px; font-size:16px; }
     .nav-left { left:2px; }
     .nav-right { right:2px; }
+    .bookmark-star { width:24px; height:24px; bottom:8px; right:8px; }
+    .focus-back .bookmark-star { width:30px; height:30px; bottom:14px; right:14px; }
   }
 </style>
 </head>
@@ -332,6 +358,7 @@
     <div class="queue-toggle" id="queueToggle">
       <button class="queue-btn active" data-q="star">重点</button>
       <button class="queue-btn" data-q="all">全部</button>
+      <button class="queue-btn" data-q="bookmark">收藏</button>
     </div>
     <div class="mode-toggle">
       <button class="mode-btn active" data-mode="overview">概览</button>
@@ -398,18 +425,38 @@ sections.forEach(s => {
 
 let filterFilter = 'all';
 let currentMode = 'overview';
-let focusQueue = 'star'; // 'star' or 'all'
+let focusQueue = 'star'; // 'star' | 'all' | 'bookmark'
 let focusIndex = 0;
 let focusList = [];
 let isSwitching = false;
+let bookmarks = new Set(JSON.parse(localStorage.getItem('szkp_bookmarks') || '[]'));
+
+function saveBookmarks() {
+  localStorage.setItem('szkp_bookmarks', JSON.stringify([...bookmarks]));
+}
+
+function isBookmarked(c) { return bookmarks.has(c.t); }
+function toggleBookmark(c) {
+  if (bookmarks.has(c.t)) { bookmarks.delete(c.t); }
+  else { bookmarks.add(c.t); }
+  saveBookmarks();
+  return isBookmarked(c);
+}
+
+function updateBookmarkStar(el, booked) {
+  if (booked) { el.classList.add('booked'); }
+  else { el.classList.remove('booked'); }
+}
 
 function getFocusList() {
-  const keyed = CARDS.filter(c => c.k);
-  return focusQueue === 'star' ? keyed : CARDS;
+  if (focusQueue === 'star') return CARDS.filter(c => c.k);
+  if (focusQueue === 'bookmark') return CARDS.filter(c => bookmarks.has(c.t));
+  return CARDS;
 }
 
 function buildOverviewCard(c) {
   const star = c.k ? ' star' : '';
+  const booked = isBookmarked(c) ? ' booked' : '';
   return `<div class="card-wrap${star}">
     <div class="card">
       <div class="card-face front">
@@ -421,6 +468,12 @@ function buildOverviewCard(c) {
       <div class="card-face back">
         <div class="back-term">${c.t}</div>
         <div class="detail">${c.detail}</div>
+        <button class="bookmark-star${booked}" data-t="${c.t.replace(/"/g,'&quot;')}">
+          <svg viewBox="0 0 24 24">
+            <polygon class="star-outline" points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+            <polygon class="star-fill" points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+          </svg>
+        </button>
       </div>
     </div>
   </div>`;
@@ -449,6 +502,15 @@ function bindOverviewClicks() {
   document.querySelectorAll('#overviewContent .card-wrap').forEach(wrap => {
     wrap.addEventListener('click', function(e) { this.classList.toggle('flipped'); });
   });
+  document.querySelectorAll('#overviewContent .bookmark-star').forEach(star => {
+    star.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const card = CARDS.find(c => c.t === this.dataset.t);
+      if (!card) return;
+      const booked = toggleBookmark(card);
+      updateBookmarkStar(this, booked);
+    });
+  });
 }
 
 // ---- FOCUS MODE ----
@@ -464,6 +526,7 @@ function renderFocusCard(instant) {
   sectionLabel.textContent = c.s;
 
   const star = c.k ? ' star' : '';
+  const booked = isBookmarked(c) ? ' booked' : '';
   const html = `
     <div class="focus-card-wrap${star}">
       <div class="focus-card">
@@ -476,6 +539,12 @@ function renderFocusCard(instant) {
         <div class="focus-face focus-back">
           <div class="back-term">${c.t}</div>
           <div class="detail">${c.detail}</div>
+          <button class="bookmark-star${booked}" data-t="${c.t.replace(/"/g,'&quot;')}">
+            <svg viewBox="0 0 24 24">
+              <polygon class="star-outline" points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+              <polygon class="star-fill" points="12,2 15,9 22,9 16,14 18,22 12,17 6,22 8,14 2,9 9,9"/>
+            </svg>
+          </button>
         </div>
       </div>
     </div>`;
@@ -486,8 +555,26 @@ function renderFocusCard(instant) {
   if (!wrap) return;
 
   wrap.addEventListener('click', function(e) {
+    if (e.target.closest('.bookmark-star')) return;
     if (!isSwitching) this.classList.toggle('flipped');
   });
+
+  const starBtn = wrap.querySelector('.bookmark-star');
+  if (starBtn) {
+    starBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const card = CARDS.find(cd => cd.t === this.dataset.t);
+      if (!card) return;
+      const booked = toggleBookmark(card);
+      updateBookmarkStar(this, booked);
+      // refresh focus list if in bookmark mode
+      if (focusQueue === 'bookmark') {
+        focusList = getFocusList();
+        if (focusIndex >= focusList.length) focusIndex = Math.max(0, focusList.length - 1);
+        updateCounter();
+      }
+    });
+  }
 
   if (!instant) {
     const dir = focusNavDir || 1;
