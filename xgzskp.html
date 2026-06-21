@@ -383,7 +383,7 @@
   <div class="section-label" id="sectionLabel"></div>
   <div class="focus-stage" id="focusStage"></div>
   <div class="counter" id="counter">1 / 1</div>
-  <div class="hint-bar">← → 切换卡片 &nbsp;|&nbsp; 空格 / 点击 翻转</div>
+  <div class="hint-bar">← → 切换卡片 &nbsp;|&nbsp; 空格/点击 翻转 &nbsp;|&nbsp; Enter 收藏/取消</div>
 </div>
 
 <script>
@@ -672,6 +672,14 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault();
     const wrap = focusStage.querySelector('.focus-card-wrap');
     if (wrap && !isSwitching) wrap.classList.toggle('flipped');
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (!focusList.length) return;
+    const c = focusList[focusIndex];
+    const idx = CARDS.indexOf(c);
+    const btn = focusStage.querySelector('.fav-star');
+    if (btn) btn.click();
   }
 });
 
