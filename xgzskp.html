@@ -184,6 +184,15 @@
     font-weight:600; color:rgba(0,0,0,0.3); margin-bottom:3px; font-size:9px;
     letter-spacing:0.05em;
   }
+  .fav-star {
+    position:absolute; bottom:8px; right:8px;
+    font-size:15px; cursor:pointer; opacity:0.25;
+    transition:all 0.2s; user-select:none; -webkit-user-select:none;
+    background:none; border:none; padding:4px; line-height:1;
+    color:#aaa; font-family:inherit;
+  }
+  .fav-star:hover { opacity:0.6; transform:scale(1.15); }
+  .fav-star.active { opacity:1; color:#f0c040; }
 
   .card-wrap.star .front {
     border-color:rgba(180,130,30,0.3);
@@ -275,6 +284,10 @@
     font-weight:600; color:rgba(0,0,0,0.25); margin-bottom:6px; font-size:13px;
     letter-spacing:0.05em;
   }
+  .focus-back .fav-star {
+    bottom:16px; right:16px;
+    font-size:28px;
+  }
 
   /* focus star */
   .focus-card-wrap.star .focus-front {
@@ -352,6 +365,7 @@
     <div class="queue-toggle" id="queueToggle">
       <button class="queue-btn active" data-q="star">重点</button>
       <button class="queue-btn" data-q="all">全部</button>
+      <button class="queue-btn" data-q="fav">收藏</button>
     </div>
     <div class="mode-toggle">
       <button class="mode-btn active" data-mode="overview">概览</button>
@@ -453,19 +467,24 @@ sections.forEach(s => {
 
 let filterFilter = 'all';
 let currentMode = 'overview';
-let focusQueue = 'star'; // 'star' or 'all'
+let focusQueue = 'star'; // 'star' or 'all' or 'fav'
 let focusIndex = 0;
 let focusList = [];
 let isSwitching = false;
 
+let favorites = new Set(JSON.parse(localStorage.getItem('xg-favs') || '[]'));
+function saveFavs() { localStorage.setItem('xg-favs', JSON.stringify([...favorites])); }
+
 function getFocusList() {
+  if (focusQueue === 'fav') return CARDS.filter((_, i) => favorites.has(i));
   const keyed = CARDS.filter(c => c.k);
   return focusQueue === 'star' ? keyed : CARDS;
 }
 
-function buildOverviewCard(c) {
+function buildOverviewCard(c, idx) {
   const star = c.k ? ' star' : '';
-  return `<div class="card-wrap${star}">
+  const fav = favorites.has(idx) ? ' active' : '';
+  return `<div class="card-wrap${star}" data-idx="${idx}">
     <div class="card">
       <div class="card-face front">
         ${c.k ? '<div class="tag">重点</div>' : ''}
@@ -477,6 +496,7 @@ function buildOverviewCard(c) {
         <div class="back-term">${c.t}</div>
         <div class="detail">${c.detail}</div>
         ${c.q ? `<div class="questions"><div class="q-label">📋 考法提示</div>${c.q}</div>` : ''}
+        <button class="fav-star${fav}" data-idx="${idx}" title="收藏/取消收藏">⭐</button>
       </div>
     </div>
   </div>`;
@@ -490,13 +510,13 @@ function renderOverview(filter) {
       const cards = CARDS.filter(c => c.s === sec);
       if (!cards.length) return;
       html += `<div class="section-title">${sec}</div><div class="grid">`;
-      cards.forEach(c => html += buildOverviewCard(c));
+      cards.forEach(c => html += buildOverviewCard(c, CARDS.indexOf(c)));
       html += '</div>';
     });
     overviewContent.innerHTML = html;
   } else {
     const cards = CARDS.filter(c => c.s === filter);
-    overviewContent.innerHTML = `<div class="section-title">${filter}</div><div class="grid">${cards.map(c => buildOverviewCard(c)).join('')}</div>`;
+    overviewContent.innerHTML = `<div class="section-title">${filter}</div><div class="grid">${cards.map(c => buildOverviewCard(c, CARDS.indexOf(c))).join('')}</div>`;
   }
   bindOverviewClicks();
 }
@@ -520,6 +540,8 @@ function renderFocusCard(instant) {
   sectionLabel.textContent = c.s;
 
   const star = c.k ? ' star' : '';
+  const cardIdx = CARDS.indexOf(c);
+  const fav = favorites.has(cardIdx) ? ' active' : '';
   const html = `
     <div class="focus-card-wrap${star}">
       <div class="focus-card">
@@ -533,6 +555,7 @@ function renderFocusCard(instant) {
           <div class="back-term">${c.t}</div>
           <div class="detail">${c.detail}</div>
           ${c.q ? `<div class="questions"><div class="q-label">📋 考法提示</div>${c.q}</div>` : ''}
+          <button class="fav-star${fav}" data-idx="${cardIdx}" title="收藏/取消收藏">⭐</button>
         </div>
       </div>
     </div>`;
@@ -649,6 +672,24 @@ document.addEventListener('keydown', function(e) {
 // Nav arrows
 document.getElementById('navLeft').addEventListener('click', () => { if (currentMode === 'focus') focusNav(-1); });
 document.getElementById('navRight').addEventListener('click', () => { if (currentMode === 'focus') focusNav(1); });
+
+// Favorite star click (global delegation)
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.fav-star');
+  if (!btn) return;
+  e.stopPropagation();
+  const idx = parseInt(btn.dataset.idx);
+  if (favorites.has(idx)) { favorites.delete(idx); } else { favorites.add(idx); }
+  saveFavs();
+  // Update all stars for this card index
+  document.querySelectorAll(`.fav-star[data-idx="${idx}"]`).forEach(s => {
+    s.classList.toggle('active', favorites.has(idx));
+  });
+  // If in focus mode on fav queue and unfavoriting, refresh list
+  if (currentMode === 'focus' && focusQueue === 'fav') {
+    initFocus();
+  }
+});
 
 // Touch swipe
 let touchStartX = 0;
